@@ -57,7 +57,9 @@ final class PostProcessorRegistrationDelegate {
 	 * 以及bean工厂的对所有的bean的扫描
 	 *
 	 *
-	 * 使用的是策略模式 根据不同的实现接口(不同的策略予以区分 )
+	 * 使用的是策略模式 根据不同的实现接口(不同的策略予以区分 ) 虽然他们都是beanFactortPostProcessor/beanDefinitionRegistryPostProcessor的实现类
+	 * 但是因为他们实现了不同的接口 也就是不同的策略 所以才执行的时候也会有所区分
+	 *
 	 * 然后分批执行
 	 *
 	 * @param beanFactory
@@ -95,6 +97,8 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
 
 			//这里存放的是所有注册的  BeanDefinitionRegistryPostProcessor  但是 BeanDefinitionRegistryPostProcessor是这里存放的是标准的beanFactoryPostProcessor的子类接口
+			//是通过API添加进去的beanFactoryPostProcessors
+
 
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
@@ -133,6 +137,7 @@ final class PostProcessorRegistrationDelegate {
 			currentRegistryProcessors.clear();
 
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
+			//找orderly策略的所有beanFactoryPostProcessor
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
