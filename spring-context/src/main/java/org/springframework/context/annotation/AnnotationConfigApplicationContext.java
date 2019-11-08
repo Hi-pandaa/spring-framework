@@ -64,6 +64,12 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext() {
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+
+		/**
+		 * 这个springbean 扫描器是提供给开发者使用的扫描器
+		 * 开闭源原则
+		 *
+		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -82,10 +88,24 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * from the given component classes and automatically refreshing the context.
 	 * @param componentClasses one or more component classes &mdash; for example,
 	 * {@link Configuration @Configuration} classes
+	 *
+	 *
+	 *          如果配置类加了@configuration注解
+	 *    在他元数据   BeanMetadataElement 当中就会存在这个注解
+	 *    在 beanDefnitionRegistryPostProcessor的实现类configurationClassPostProsessor
+	 *    处理的过程中 就会在他的AttributeAccessor 当中存储对应 configurationClass  full
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		//初始化容器   注册spring 启动必须的5个后置处理器到BeanDefinitionMap
 		this();
+		//将指定的配置类AppConfig注入到beanDefinitionMap当中
+		//注意：这里的beanDefnition 是一个特殊的beanDefinition   AnnotatedBeanDefinition 也就是这个类后面会才能找到他然后初始化功能
+		//而这个AnnotatedBeanDefinition 中继承的两个类
+		// AttributeAccessor  存储一些额外的信息 full 是否被解析过
+		// BeanMetadataElement 描述的类信息的 比如注解..... 如果加了@componentScan 注解信息就存在beanDetaData当中 扫描出来的beanDefinition 是ScanneredBeanDefinition
 		register(componentClasses);
+		//开始启动容器 所以当容器正式启动前  beanDefnitionMap 当中有6个key  5个后置处理器+一个appConfig的AnnotatedBeanDefinition
+
 		refresh();
 	}
 

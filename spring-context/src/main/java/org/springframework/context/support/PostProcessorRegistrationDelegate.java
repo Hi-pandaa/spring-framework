@@ -52,15 +52,50 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 
+	/**
+	 * 这个方法主要执行了各种beanFactoryPostProsessor 完成bean工厂的初始化
+	 * 以及bean工厂的对所有的bean的扫描
+	 *
+	 *
+	 * 使用的是策略模式 根据不同的实现接口(不同的策略予以区分 )
+	 * 然后分批执行
+	 *
+	 * @param beanFactory
+	 * @param beanFactoryPostProcessors 开发者手动注册进去的beanFactoryPostProcessors 一般为空 初始化方式为 ioc.addBeanFactoryPostProcessor 而不是通过注解的方式
+	 *                                  								  如果存在 spring会先对其进行处理 区分它是 beanFactoryProcessor还是一个 beanDefinitionRegistryPostProcessor
+	 *
+	 **
+	 *
+	 *
+	 *
+	 *          ***************spring 对bean工厂的后置处理器的执行顺序
+	 *                                  1.优先执行由开发者使用API提供的beanFactoryPostProcessor    ---applicationContext.addBeanFactoryPostProcessor();
+	 *                                  如果用这种方式加进去的benaFactoryPostProsessors会在spring 容器的configurationClassPostProcessor扫描之前就执行  跟加注解的不一样
+	 *                                  这种情况用的比较少
+	 *
+	 *
+	 *
+	 *                                  2.
+	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 
 		// Invoke BeanDefinitionRegistryPostProcessors first, if any.
+		//所有存在的BeanDefinitionRegistryPostProcessors的名字
 		Set<String> processedBeans = new HashSet<>();
 
+
+		//90%
 		if (beanFactory instanceof BeanDefinitionRegistry) {
 			BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
+
+
+			//这里存放的是标准的beanFactoryPostProcessors
+
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
+
+			//这里存放的是所有注册的  BeanDefinitionRegistryPostProcessor  但是 BeanDefinitionRegistryPostProcessor是这里存放的是标准的beanFactoryPostProcessor的子类接口
+
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
@@ -93,6 +128,8 @@ final class PostProcessorRegistrationDelegate {
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			registryProcessors.addAll(currentRegistryProcessors);
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
+
+			//执行完成一种策略以后 就把执行完成的策略清除
 			currentRegistryProcessors.clear();
 
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
@@ -127,7 +164,15 @@ final class PostProcessorRegistrationDelegate {
 			}
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
+			//执行BeanDefinitionRegistryPostProcessor的实现类 当中 最顶层父接口 postProcessBeanFactory的方法
+
+			//其实在spring执行所有的beanFactory后置处理器的过程中  优先执行  beanDefinitionRegistryPostProcessor的方法 在执行父接口beanFactoryPostProcessor的方法
+
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
+
+			/**
+			 * 执行开发自己提供的 BeanFactoryPostProcessor的方法
+			 */
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
 		}
 
