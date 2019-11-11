@@ -75,9 +75,35 @@ final class PostProcessorRegistrationDelegate {
 	 *                                  如果用这种方式加进去的benaFactoryPostProsessors会在spring 容器的configurationClassPostProcessor扫描之前就执行  跟加注解的不一样
 	 *                                  这种情况用的比较少
 	 *
+
+	 *
+	 *========================================================该方法的执行流程========================================================================
+	 *                                 BeanDefinitionRegistryPostProcessor 执行流程(api/spring自己提供的 put到beanDefinitionMap当中/@bean|@import设置)
+	 *									执行子类接口的方法
 	 *
 	 *
-	 *                                  2.
+	 *                                  	1>执行通过API添加的beanDefinitionRegistryPostProcessor
+	 *
+	 *
+	 *                                   2>spring 自己提供的后置处理器 +包括了程序员提供的实现了某些(PriorityOrdered/Ordered)策略的后置处理器
+	 *                                  1>执行A 策略 加到已执行的集合当中
+	 *                                  2>执行B 策略 且没有被执行过 (防止有交集)  加到已执行的集合当中
+	 *                                  3>执行所有的 且没有被执行过的
+	 *
+	 *
+	 *                                 3> 执行普通的通过代码而不是API注入的beanDefnitionRegistryPostProcessor
+	 *======================================================================================================================================
+	 *
+	 *                                  beanFactoryPostProsessor 执行流程(api/spring自己提供的 put到beanDefinitionMap当中/@bean|@import设置)
+	 *
+	 *                                  执行父类接口的方法
+	 *
+	 *                                  1>优先执行 BeanDefinitionRegistryPostProcessor子类 的父类接口 beanFactoryPostProsessor的方法
+	 *                                  2>再执行只实现了父类的后置处理器的方法
+	 *
+	 *
+	 *
+	 *
 	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
@@ -124,7 +150,10 @@ final class PostProcessorRegistrationDelegate {
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
+				//符合PriorityOrdered策略
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+					//这里的getBean其实就是从beanDefinitionMap中的把bd给实例化了
+
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
 					processedBeans.add(ppName);
 				}
@@ -140,8 +169,10 @@ final class PostProcessorRegistrationDelegate {
 			//找orderly策略的所有beanFactoryPostProcessor
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
+				//没有被执行过且 符合Ordered策略
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
+					//加到已经处理的beanNames 的集合当中去
 					processedBeans.add(ppName);
 				}
 			}
@@ -154,8 +185,12 @@ final class PostProcessorRegistrationDelegate {
 			boolean reiterate = true;
 			while (reiterate) {
 				reiterate = false;
+
+				//拿到所有的BeanDefinitionRegistryPostProcessor的实现类
 				postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 				for (String ppName : postProcessorNames) {
+					//这里判断是否被上面其他的策略执行过 如果执行过就不执行了
+
 					if (!processedBeans.contains(ppName)) {
 						currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
 						processedBeans.add(ppName);
