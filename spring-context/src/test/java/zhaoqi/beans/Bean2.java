@@ -1,5 +1,7 @@
 package zhaoqi.beans;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,5 +11,12 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
+@Import(Bean3.class)
 public class Bean2 {
+
+	@Bean
+	public Bean1 bean1() {
+		return new Bean1();
+
+	}
 }

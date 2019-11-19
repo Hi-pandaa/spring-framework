@@ -101,8 +101,9 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		//将指定的配置类AppConfig注入到beanDefinitionMap当中
 		//注意：这里的beanDefnition 是一个特殊的beanDefinition   AnnotatedBeanDefinition 也就是这个类后面会才能找到他然后初始化功能
 		//而这个AnnotatedBeanDefinition 中继承的两个类
-		// AttributeAccessor  存储一些额外的信息 full 是否被解析过
+		// AttributeAccessor  存储一些额外的信息  标记了是否是一个全配置类 configurationClass full/lite (根据@configuration注解来识别的)
 		// BeanMetadataElement 描述的类信息的 比如注解..... 如果加了@componentScan 注解信息就存在beanDetaData当中 扫描出来的beanDefinition 是ScanneredBeanDefinition
+		//@configuration 其实这个类会变成一个全配置类 并且会生成一个代理的springbean对象
 		register(componentClasses);
 		//开始启动容器 所以当容器正式启动前  beanDefnitionMap 当中有6个key  5个后置处理器+一个appConfig的AnnotatedBeanDefinition
 

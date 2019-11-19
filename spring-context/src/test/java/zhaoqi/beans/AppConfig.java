@@ -9,9 +9,11 @@ import org.springframework.context.annotation.Configuration;
 public class AppConfig {
 
 
-	@Bean
-	public Bean1 bean1() {
-		return new Bean1();
 
+
+	@Bean
+	public BeanDefinitionRegistryTest beanDefinitionRegistryTest(){
+		return new BeanDefinitionRegistryTest();
 	}
+
 }
