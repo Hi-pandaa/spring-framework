@@ -242,28 +242,28 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
-		final String beanName = transformedBeanName(name);
+		final String beanName = transformedBeanName(name);//对 bean 的name 进行预先的处理
+
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
+		//尝试从单例池中获取bean的instance
+		//这个方法分两种情况
+
+		//1>在单例池中存在这个对象 那就直接返回 没啥好说的
+
+		//2>如果在单例池中没用这个对象 需要判断对象是否正在创建
+		//第一次创建的时候sharedInstance 肯定=null
+
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
-			if (logger.isTraceEnabled()) {
-				if (isSingletonCurrentlyInCreation(beanName)) {
-					logger.trace("Returning eagerly cached instance of singleton bean '" + beanName +
-							"' that is not fully initialized yet - a consequence of a circular reference");
-				}
-				else {
-					logger.trace("Returning cached instance of singleton bean '" + beanName + "'");
-				}
-			}
-			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
-		}
 
-		else {
+			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
+		} else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
 			if (isPrototypeCurrentlyInCreation(beanName)) {
+				//原则上这跟bean 肯定不是正在创建过程的
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
@@ -317,9 +317,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 
 				// Create bean instance.
+				//在这里才是真正意义的创建一个bean
+
 				if (mbd.isSingleton()) {
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
+							//create bean
 							return createBean(beanName, mbd, args);
 						}
 						catch (BeansException ex) {

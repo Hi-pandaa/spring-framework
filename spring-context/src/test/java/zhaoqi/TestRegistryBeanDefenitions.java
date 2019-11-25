@@ -78,7 +78,25 @@ public class TestRegistryBeanDefenitions {
 		//总结下
 		//全配置类  AttributeAccessor[configurationClass] 属性
 		//如果属性值是full 代表是一个全配置类
-		//full
+		//full 加了@configuration的类 一定是一个全配置类 会被Spring代理
+		//lite 如果不是@bean的方式 或者 factoryBean的初始化方式  就会是lite
+		//null 其他的情况
+
+
+		//bd 的类型
+
+		//========== AnnotatedGenericBeanDefinition ==========
+		//1>AnnotationConfigApplicationContext 构造 注入的类 无论是否带@configuration
+		//2>@import  注入的bean
+
+		//==========ScannedGenericBeanDefinition===========
+		//1>@ComponentScan扫到的带@component /@service bean
+
+		//===========ConfigurationClassBeanDefinition==========
+		//1>使用@Bean 初始化的bean 这种bean 在一开始的 configurationClassBeanDefinition 不会扫描到这个beanDefinition
+		// 一直到它所在的bean被创建的时候才会生成一个对应的beanDefinition
+
+
 
 		System.out.println("=============================================");
 

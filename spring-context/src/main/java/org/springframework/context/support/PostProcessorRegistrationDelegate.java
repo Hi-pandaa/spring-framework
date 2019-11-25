@@ -246,7 +246,7 @@ final class PostProcessorRegistrationDelegate {
 
 			//执行了实现了beanDefinitionRegistryPostProcessor的父接口的方法 postProcessBeanFactory的方法(子类接口已经被执行了)
 			//extra : ConfigurationClassPostProcessor.postProcessBeanFactory();
-			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
+ 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 
 			/**
 			 * 执行普通的beanFactoryPostProcessord的方法 (只有API注入的)
