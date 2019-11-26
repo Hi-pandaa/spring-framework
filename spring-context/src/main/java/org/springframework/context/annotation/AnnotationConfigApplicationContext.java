@@ -88,7 +88,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		//new AnnotatedBeanDefinitionReader(this)==>AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		//configurationClassPostProcessor 也是在这个时间点组装成一个BD 放进去的
 		this();
+		//注册传入的beanClass AnnotatedBeanDefinition
+		//如果传入的是一个@configuration的注解的类 会在 AttributeAccessor.map  put一个属性 configurationClass =full 代表这是一个全配置类 需要被Spring代理 防止bean被篡改
 		register(componentClasses);
+		//容器初始化方法
+
 		refresh();
 	}
 
