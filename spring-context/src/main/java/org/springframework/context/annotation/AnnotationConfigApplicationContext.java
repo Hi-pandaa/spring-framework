@@ -84,6 +84,9 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		//在初始化构造器的 registerAnnotationConfigProcessors
+		//new AnnotatedBeanDefinitionReader(this)==>AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
+		//configurationClassPostProcessor 也是在这个时间点组装成一个BD 放进去的
 		this();
 		register(componentClasses);
 		refresh();
