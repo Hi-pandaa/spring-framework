@@ -52,6 +52,49 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 
+	/**
+	 * 这个方法的执行逻辑主要是分为两大块
+	 *
+	 * =============== 找到BeanDefinitionRegistryPostProcessor(BeanFactoryPostProcessor的子接口)的实现类 执行他们【子接口】的方法=======================
+	 *=================postProcessBeanDefinitionRegistry==================================
+	 *
+	 *
+	 * 1>找到程序员用API注入的beanFactory的实现类
+	 * 	如果是beanDefinitionRegistryPostProcessor 就直接执行子接口方法 然后放到待执行集合中(为了后面执行父类方法)
+	 * 	如果是beanFactoryPostProcessor 那就放到待执行集合中(推后执行)
+	 *
+	 * 2>在beanFactory 中寻找所有的beanDefinitionRegistryPostProcessor
+	 * 判断它是不是PriorityOrdered 策略 是就执行它的子接口方法  [这时候原则上只有一个就是ConfigurationClassPostProcessor]
+	 * ConfigurationClassPostProcessor 会将所有配置的bean 全部解析出来 包括配置类 和配置的后置处理器
+	 *
+	 * 3.在beanFactory中寻找所有的beanDefinitionRegistryPostProcessor
+	 * 判断它是不是Ordered 策略 &&没有被执行过  执行它的子接口方法 [被ConfigurationClassPostProcessor扫出来一批，Spring自带了一批]
+	 *
+	 *4.在beanFactory中寻找所有的beanDefinitionRegistryPostProcessor
+	 * 没有被执行过  执行它的子接口方法
+	 * 到这里为止 所有beanDefinitionPostProcessor的子接口方法全部执行完成
+	 *
+	 *
+	 *
+	 * ==============执行实现了所有实现了beanFactoryPostProcessor的类执行他们该接口的方法(包括了第一大块中的类，因为第一大块只执行了子类接口方法)=====
+	 *================postProcessBeanFactory=================================
+	 *
+	 * 1>执行beanDefinitionRegistryPostProcessor的父接口的方法 [子类接口已经执行完成]
+
+	 * 2>执行程序员以API提供的beanFactoryPostProcessor的方法
+	 *
+	 * 3>
+	 *
+	 *
+	 *
+	 *
+	 * ==================================================================
+	 *
+	 *
+	 *
+	 * @param beanFactory
+	 * @param beanFactoryPostProcessors
+	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 
