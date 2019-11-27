@@ -3,6 +3,7 @@ package zhaoqi.test;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import zhaoqi.test.bean.Bean1;
 import zhaoqi.test.config.AppConfg;
 
 public class TestApplicationContext {
@@ -12,7 +13,7 @@ public class TestApplicationContext {
 
 		AnnotationConfigApplicationContext ioc = new AnnotationConfigApplicationContext(AppConfg.class);
 
-		System.out.println(ioc.getBean("bean1"));
+		System.out.println(ioc.getBean(Bean1.class));
 
 		//区别不同的beanDefinition
 

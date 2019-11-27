@@ -339,6 +339,15 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return getBean(requiredType, (Object[]) null);
 	}
 
+	/**
+	 * 根据  requiredType 寻找bean
+	 * @param requiredType type the bean must match; can be an interface or superclass
+	 * @param args arguments to use when creating a bean instance using explicit arguments
+	 * (only applied when creating a new instance as opposed to retrieving an existing one)
+	 * @param <T>
+	 * @return
+	 * @throws BeansException
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getBean(Class<T> requiredType, @Nullable Object... args) throws BeansException {
@@ -825,9 +834,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		for (String beanName : beanNames) {
 			//合并为RootBeanDefinition
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
-			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
-				// 符合加载条件
-				if (isFactoryBean(beanName)) {
+			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {	// 符合加载条件
+
+				if (isFactoryBean(beanName)) {// 是否是一个FactoryBean
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						final FactoryBean<?> factory = (FactoryBean<?>) bean;
@@ -847,6 +856,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}
 				}
 				else {
+					//获取bean 这时候其实才是开始创建bean的过程中
+
 					getBean(beanName);
 				}
 			}
@@ -1109,7 +1120,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		Assert.notNull(requiredType, "Required type must not be null");
 		String[] candidateNames = getBeanNamesForType(requiredType);
 
-		if (candidateNames.length > 1) {
+		if (candidateNames.length > 1) {//别名处理
 			List<String> autowireCandidates = new ArrayList<>(candidateNames.length);
 			for (String beanName : candidateNames) {
 				if (!containsBeanDefinition(beanName) || getBeanDefinition(beanName).isAutowireCandidate()) {
