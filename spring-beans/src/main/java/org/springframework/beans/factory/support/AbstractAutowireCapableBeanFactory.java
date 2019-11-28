@@ -560,6 +560,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		if (instanceWrapper == null) {
 			//推断bean的构造方法 使用反射创建bean  并且返回这个对象的包裹对象
+			//bean生命周期-推断构造方法+实例化对象【第一步】
+			//在实例化对象之前 会把他加到
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
 		final Object bean = instanceWrapper.getWrappedInstance();
@@ -587,7 +589,6 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Eagerly cache singletons to be able to resolve circular references
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
 		//判断是否允许循环依赖
-		//bean生命周期-判断是否支持循环依赖【第二步】
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
 				isSingletonCurrentlyInCreation(beanName));
 		if (earlySingletonExposure) {
@@ -600,12 +601,26 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			//lambda 表达式 其实入参入的是一个匿名的ObjectFactory的实现类  只需要填写对应的逻辑即可
 			//**提前暴露bean创建的Object工厂  这个方法中 以后维护了beanName 和对象工厂的映射关系
 			//**而对象工厂的匿名内部类中调用的方法就是[getEarlyBeanReference]
+
+
+
+			//这里面虽然不是Spring生命周期的步骤 但是这里也是为了循环以来做的一个缓存铺垫  放入二级缓存
+			//************************
+			//spring当中存在着三级缓存
+			//一级缓存  singletonObjects
+			//二级缓存  singletonFactories 里面放的其实是对象工厂
+			// 三级缓存 earlySingletonObjects
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
 		// Initialize the bean instance.
+		//代码走到这里 其实这个bean 已经被实例化出来了
+		//但是属性值还是空
+		//bean生命周期-属性注入【第二步】
+		//包含了一部分的循环依赖
 		Object exposedObject = bean;
 		try {
+			//对属性进行注入
 			populateBean(beanName, mbd, instanceWrapper);
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
@@ -1201,7 +1216,6 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Candidate constructors for autowiring?
-		//bean生命周期-推断构造方法【第一步】
 		//=======================bean后置处理器执行时机【第二次】=====================
 		//如果只提供了一个构造方法或者不提供构造方法 默认的构造方法
 		//ctors==null 所以是找出有疑惑的构造方法
@@ -1218,6 +1232,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// No special handling: simply use no-arg constructor.
+		//使用构造器实例化一个bean
 		return instantiateBean(beanName, mbd);
 	}
 
@@ -1390,6 +1405,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
 		// state of the bean before properties are set. This can be used, for example,
 		// to support styles of field injection.
+		//判断是否需要进行属性注入
 		boolean continueWithPropertyPopulation = true;
 
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
@@ -1410,6 +1426,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
+		//属性注入的模式 ********重要******* 也就是自动装配的模式    其实我们平时说的@autowired 其实是属于手动装配
 		if (mbd.getResolvedAutowireMode() == AUTOWIRE_BY_NAME || mbd.getResolvedAutowireMode() == AUTOWIRE_BY_TYPE) {
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
 			// Add property values based on autowire by name if applicable.
@@ -1427,10 +1444,44 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		boolean needsDepCheck = (mbd.getDependencyCheck() != AbstractBeanDefinition.DEPENDENCY_CHECK_NONE);
 
 		PropertyDescriptor[] filteredPds = null;
+		//有没有像类似于xml 中显示注入属性 类似于<property>
 		if (hasInstAwareBpps) {
 			if (pvs == null) {
 				pvs = mbd.getPropertyValues();
 			}
+			//执行@autowired所需要的后置处理器
+			//=========================== 策略模式的经典实现=============================
+
+			//这些bean的后置处理器 都是 BeanPostProcessor的实现类 所以 getBeanPostProcessors()  能够全部获取到
+			//但是这些beanPostProcessor  都有着不同的策略 (简单来说 就是实现了一些策略的接口)
+			//InstantiationAwareBeanPostProcessor 就是一种策略 这样就可以加以区分
+
+			//在这下面主要有两种策略 第一种策略是处理@autowired 第二种策略是执行@resource的
+			//再执行@autowired的时候 其实就会去容器中找需要注入的bean对象 【autowiredAnnotationBeanPostProcessor】
+			//   @resource commonAnnotationBeanPostProcessor
+
+
+			//-======================================
+
+			//如果是a,b 两个bean 循环以来   a在注入属性的时候 有用到@autowired 就会走到下面的后置处理器中
+			//然后去getBean  发现bean 不存在 就会去初始化b  而b在他初始化的过程当中也会碰到属性注入
+			//也会走到下面这段代码 但是这时候其实 getBean 已经能获取到a这个bean  尽管a这个bean还没有初始化完成
+			// 但是他的bean对象已经存在了。所以就可以顺势注入
+
+			//流程
+			// a推断构造方法&初始化bean
+			// a注入属性
+			//	a 获取b b不存在
+			//b 推断构造方法& 初始化bean
+			//b注入属性
+			//b获取a 存在  *****【这也是前面bean 创建完成后为啥要放到map[early]中，哪怕这个bean还没有初始化完成 这个步骤在实例化bean之后，属性注入之前】
+			//b注入属性成功 并且完成初始化
+			//a获取b成功.
+
+
+
+
+
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
