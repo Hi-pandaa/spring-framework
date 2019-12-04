@@ -620,8 +620,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		//包含了一部分的循环依赖
 		Object exposedObject = bean;
 		try {
-			//对属性进行注入
+			//对属性进行填充
+			//=======================bean后置处理器执行时机【第五次】 属性注入=====================
+
 			populateBean(beanName, mbd, instanceWrapper);
+			//初始化的bean的操作
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -1839,11 +1842,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}, getAccessControlContext());
 		}
 		else {
+			//执行一些aware接口的实现
 			invokeAwareMethods(beanName, bean);
 		}
 
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
+			// 执行beanPostProcessor的  before init
+			//执行bean的后置处理器  before方法
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
@@ -1856,6 +1862,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Invocation of init method failed", ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
+			//执行bean的后置处理器的 after方法
+			// 所以AOP的代理也是再这个位置
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

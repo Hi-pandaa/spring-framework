@@ -128,6 +128,9 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		BeanDefinitionParserDelegate parent = this.delegate;
 		this.delegate = createDelegate(getReaderContext(), root, parent);
 
+		/**
+		 * 检查命名空间部分
+		 */
 		if (this.delegate.isDefaultNamespace(root)) {
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
 			if (StringUtils.hasText(profileSpec)) {
@@ -144,9 +147,12 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 				}
 			}
 		}
-
+		// <3> 解析前处理
 		preProcessXml(root);
+		//解析bd
 		parseBeanDefinitions(root, this.delegate);
+		// <5> 解析后处理
+
 		postProcessXml(root);
 
 		this.delegate = parent;
@@ -166,6 +172,10 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 * @param root the DOM root element of the document
 	 */
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
+
+/*		Spring 有两种 Bean 声明方式：
+		配置文件式声明：<bean id="studentService" class="org.springframework.core.StudentService" /> 。对应 <1> 处。
+		自定义注解方式：<tx:annotation-driven> 。对应 <2> 处。*/
 		if (delegate.isDefaultNamespace(root)) {
 			NodeList nl = root.getChildNodes();
 			for (int i = 0; i < nl.getLength(); i++) {
@@ -173,15 +183,19 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 				if (node instanceof Element) {
 					Element ele = (Element) node;
 					if (delegate.isDefaultNamespace(ele)) {
+						//默认的bean 解析 <bean></bean>
 						parseDefaultElement(ele, delegate);
 					}
 					else {
+						//执行自定义的解析
 						delegate.parseCustomElement(ele);
 					}
 				}
 			}
 		}
 		else {
+			//执行自定义的解析
+			//<tx> 类似的标签
 			delegate.parseCustomElement(root);
 		}
 	}
