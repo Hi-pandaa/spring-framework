@@ -24,6 +24,10 @@ import org.springframework.lang.Nullable;
  *
  * @author Rob Harrop
  * @since 2.0
+ *
+ * 扩展的属性
+ * 如果一个类加了@configuration  就会在写入一个属性 configurationClass=full 这样的bean就会被代理 常用于配置一些bean
+ * 这些bean可以保持为单例的  (代理)
  */
 public interface AttributeAccessor {
 
