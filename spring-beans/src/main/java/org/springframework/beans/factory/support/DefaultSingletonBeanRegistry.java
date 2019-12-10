@@ -161,6 +161,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	@Override
 	@Nullable
 	public Object getSingleton(String beanName) {
+		//允许循环依赖为true
 		return getSingleton(beanName, true);
 	}
 
@@ -171,24 +172,118 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param beanName the name of the bean to look for
 	 * @param allowEarlyReference whether early references should be created or not
 	 * @return the registered singleton object, or {@code null} if none found
+	 *
+	 *
+	 * *****SpringBean 创建的三级缓存
+	 *
+	 * singletonObjects  单例池
+	 *
+	 * earlySingletonObjects 创建中bean缓存池 二级缓存【循环依赖使用】
+	 *
+	 * singletonFactories  单例工厂 缓存
+	 *
+	 * singletonsCurrentlyInCreation 正在创建的beanName Set
+	 *
+	 *
+	 *
+	 * 1>
+	 * ==============bean的创建过程=================
+	 * 单例池不存在 且bean不在创建的过程中
+	 *
+	 * singletonsCurrentlyInCreation null
+	 *
+	 * singletonObjects  null
+	 *
+	 *earlySingletonObjects null
+	 *
+	 *singletonFactories  null
+	 *
+	 * ======================如果返回的结果为null 开始bean的创建流程=================
+	 * 开始生成创建的bean的 singletonFactory
+	 * 将beanName放到 singletonsCurrentlyInCreation 中 [beforeSingletonCreation]  将 singletonFactory放到singletonFactories中
+	 *
+	 *
+	 *singletonsCurrentlyInCreation 存在
+	 *
+	 * singletonObjects  null
+	 *
+	 *earlySingletonObjects null
+	 *
+	 *singletonFactories  存在
+	 *
+	 * ==================================== branch1 其他的bean创建的过程中 因为属性注入【循环依赖】的原因要用到这个bean=====
+	 *
+	 *  因为发现这个bean 在singletonObjects不存在 且正在创建的过程中
+	 *  去正在创建的earlySingletonObjects看一下是否存在 如果存在就直接返回了 说明早期bean已经创建出来 且放到创建中的bean缓存当中了
+	 *  如果不存在 就开始将bean真的创建出来 (singletonFactory.getObject())
+	 *  然后 singletonFactories 移除这个bean的工厂 。 earlySingletonObjects 放入这个创建中的bean 供循环依赖
+	 *
+	 *singletonsCurrentlyInCreation 不存在
+	 *
+	 * singletonObjects  null
+	 *
+	 *earlySingletonObjects 存在
+	 *
+	 *singletonFactories  null
+	 *
+	 * 从三级缓存刷到二级缓存
+	 *
+	 *
+	 * ========================================到这个时候 创建中的bean已经在 earlySingletonObjects存在，其他的bean在属性注入的过程中 已经能拿到这个bean了，但是可能属性还是不全
+	 *
+	 * //TODO 尚未考证
+	 * 当这个bean的属性已经完成注入  属性注入全部完成
+	 * 从二级缓存 earlySingletonObjects 移除   将这个属性注入完成的bean 放到 singletonObjects
+	 *
+	 *singletonsCurrentlyInCreation 存在
+	 *
+	 * singletonObjects  存在
+	 *
+	 *earlySingletonObjects null
+	 *
+	 *singletonFactories  null
+	 * ==============================================执行bean一些生命周期的回调 ，一些beanPostProcessor的方法 【代理等等】======
+	 *
+	 *
+	 *
+	 * 而工厂类的createBean [singletonFactories.getObject()]
+	 *
+	 * 1> 推断构造方法
+	 * 2>属性注入
+	 * 3>循环依赖
+	 * 4>代理
+	 *
+	 *
+	 *
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 		//从单例池中尝试获取这个beanObject
 		Object singletonObject = this.singletonObjects.get(beanName);
-		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {//单例池无此bean +singletonsCurrentlyInCreation包含了这个beanName【代表这个bean正在创建的过程中】
-			synchronized (this.singletonObjects) {
-				//从正在创建的earlySingletonObjects 获取这个bean
-				singletonObject = this.earlySingletonObjects.get(beanName);
-				if (singletonObject == null && allowEarlyReference) {//如果earlySingletonObjects 中不包含这个bean 且允许 循环依赖
-					//获取单例工厂
+		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+			//如果在单例池当中没有这个对象 且这个对象正在创建的过程中( Set singletonsCurrentlyInCreation.contains(beanName)=true))
 
+			synchronized (this.singletonObjects) {//给单例池加锁
+				//从正在创建的earlySingletonObjects 获取这个bean
+				//从 Map earlySingletonObjects.get(beanName);
+				singletonObject = this.earlySingletonObjects.get(beanName);
+				if (singletonObject == null && allowEarlyReference) {
+					//如果earlySingletonObjects 中不包含这个bean 且允许 循环依赖
+					//如果在创建过程中  肯定在单例工厂中存在
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+					//这里为null 说明还在早期bean的创建流程中
 					if (singletonFactory != null) {
-						singletonObject = singletonFactory.getObject();
-						//放到创建中的早期单例池中
+						singletonObject = singletonFactory.getObject();//生成这个bean
 						this.earlySingletonObjects.put(beanName, singletonObject);
 						this.singletonFactories.remove(beanName);
+						//bean创建中early单例池中 供循环依赖使用 这样下次 再回到这个方法 bean 已经有了 ，可能还没有完成属性注入
+						//singletonObjects null
+						//earlySingletonObjects 存在
+						//singletonFactories null
+
+						//但是在这个时候这个bean虽然不能提供给开发者使用  但是可以提供给其他的bean 循环依赖使用
+
+
 					}
 				}
 			}
@@ -220,7 +315,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				//在bean创建前  初始化 将beanname 添加到正在创建的bean集合当中
+				//在bean创建前  初始化 将beanname 添加到正在创建的bean集合当中singletonsCurrentlyInCreation
 
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
@@ -229,7 +324,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
-					singletonObject = singletonFactory.getObject();//执行的是外面的lambda表达式执行的createBean方法
+					//在这个方法里面完成了bean 的创建  bean的属性输入,循环依赖
+					singletonObject = singletonFactory.getObject();//执行的是外面的lambda表达式执行的createBean方法 一个匿名实现类
+
 					newSingleton = true;
 				}
 				catch (IllegalStateException ex) {
@@ -255,6 +352,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {
+					//完成springbean的初始化 在从缓存单例池中移出  加入到单例池当中
 					addSingleton(beanName, singletonObject);
 				}
 			}
